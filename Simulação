@@ -1,0 +1,302 @@
+import math
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+
+G = 1.0
+M = 1.0
+
+x = 1.0
+y = 0.0
+
+vx = 0.0
+vy = 0.85
+
+dt = 0.002
+
+passos_por_frame = 5
+
+tamanho_trilha = 1500
+
+
+def aceleracao(x, y):
+
+    distancia = math.sqrt(x**2 + y**2)
+
+    ax = -G * M * x / distancia**3
+    ay = -G * M * y / distancia**3
+
+    return ax, ay
+
+
+def rk4(x, y, vx, vy, dt):
+
+    k1x = vx
+    k1y = vy
+
+    k1vx, k1vy = aceleracao(x, y)
+
+    k2x = vx + k1vx * dt / 2
+    k2y = vy + k1vy * dt / 2
+
+    k2vx, k2vy = aceleracao(
+        x + k1x * dt / 2,
+        y + k1y * dt / 2
+    )
+
+
+    k3x = vx + k2vx * dt / 2
+    k3y = vy + k2vy * dt / 2
+
+    k3vx, k3vy = aceleracao(
+        x + k2x * dt / 2,
+        y + k2y * dt / 2
+    )
+
+    k4x = vx + k3vx * dt
+    k4y = vy + k3vy * dt
+
+    k4vx, k4vy = aceleracao(
+        x + k3x * dt,
+        y + k3y * dt
+    )
+
+    novo_x = x + dt / 6 * (
+        k1x + 2*k2x + 2*k3x + k4x
+    )
+
+    novo_y = y + dt / 6 * (
+        k1y + 2*k2y + 2*k3y + k4y
+    )
+
+    novo_vx = vx + dt / 6 * (
+        k1vx + 2*k2vx + 2*k3vx + k4vx
+    )
+
+    novo_vy = vy + dt / 6 * (
+        k1vy + 2*k2vy + 2*k3vy + k4vy
+    )
+
+    return novo_x, novo_y, novo_vx, novo_vy
+
+def energia(x, y, vx, vy):
+
+    distancia = math.sqrt(x**2 + y**2)
+
+    velocidade_quadrada = vx**2 + vy**2
+
+    energia_cinetica = velocidade_quadrada / 2
+
+    energia_potencial = -G * M / distancia
+
+    return energia_cinetica + energia_potencial
+
+lista_x = []
+lista_y = []
+
+plt.style.use("dark_background")
+
+fig, ax = plt.subplots(figsize=(10, 7))
+
+fig.patch.set_facecolor("#050505")
+ax.set_facecolor("#050505")
+
+ax.set_xlim(-1.8, 1.8)
+ax.set_ylim(-1.8, 1.8)
+
+ax.set_aspect("equal")
+
+
+ax.spines["top"].set_visible(False)
+ax.spines["right"].set_visible(False)
+
+ax.spines["left"].set_color("#444444")
+ax.spines["bottom"].set_color("#444444")
+
+ax.tick_params(colors="#888888")
+
+ax.grid(
+    True,
+    color="#222222",
+    alpha=0.5
+)
+
+estrelas_x = [
+    -1.6, -1.2, -0.8, -0.3,
+     0.2,  0.7,  1.3,  1.6,
+    -1.5, -0.9,  0.4,  1.1
+]
+
+estrelas_y = [
+     1.4,  1.0, -1.4,  1.5,
+    -1.6,  1.3, -0.9,  0.8,
+    -0.4,  0.5,  0.9, -1.5
+]
+
+ax.scatter(
+    estrelas_x,
+    estrelas_y,
+    s=3,
+    color="white",
+    alpha=0.4
+)
+
+sol = ax.scatter(
+    0,
+    0,
+    s=350,
+    color="#f2c94c",
+    edgecolors="none",
+    zorder=5
+)
+
+planeta = ax.scatter(
+    x,
+    y,
+    s=45,
+    color="#74b9ff",
+    edgecolors="white",
+    linewidths=0.5,
+    zorder=6
+)
+
+trilha, = ax.plot(
+    [],
+    [],
+    color="#74b9ff",
+    linewidth=1,
+    alpha=0.6
+)
+
+vetor_velocidade = ax.quiver(
+    x,
+    y,
+    vx,
+    vy,
+    color="#74b9ff",
+    angles="xy",
+    scale_units="xy",
+    scale=2,
+    width=0.004
+)
+
+
+ax_texto = ax.text(
+    0.03,
+    0.96,
+    "",
+    transform=ax.transAxes,
+    verticalalignment="top",
+    fontsize=10,
+    color="#dddddd",
+    family="monospace"
+)
+
+tempo = 0.0
+
+def atualizar(frame):
+
+    global x, y, vx, vy
+    global tempo, vetor_velocidade
+
+    for i in range(passos_por_frame):
+
+        x, y, vx, vy = rk4(
+            x,
+            y,
+            vx,
+            vy,
+            dt
+        )
+
+        tempo += dt
+
+    lista_x.append(x)
+    lista_y.append(y)
+
+
+    if len(lista_x) > tamanho_trilha:
+
+        lista_x.pop(0)
+        lista_y.pop(0)
+
+
+    trilha.set_data(
+        lista_x,
+        lista_y
+    )
+
+    planeta.set_offsets(
+        [[x, y]]
+    )
+
+    ax_grav, ay_grav = aceleracao(x, y)
+
+    vetor_velocidade.remove()
+
+    vetor_velocidade = ax.quiver(
+        x,
+        y,
+        vx,
+        vy,
+        color="#74b9ff",
+        angles="xy",
+        scale_units="xy",
+        scale=2,
+        width=0.004
+    )
+
+    distancia = math.sqrt(
+        x**2 + y**2
+    )
+
+    velocidade = math.sqrt(
+        vx**2 + vy**2
+    )
+
+    aceleracao_valor = math.sqrt(
+        ax_grav**2 + ay_grav**2
+    )
+
+    energia_valor = energia(
+        x,
+        y,
+        vx,
+        vy
+    )
+
+
+    texto = (
+        f"t = {tempo:8.3f}\n"
+        f"r = {distancia:8.4f}\n"
+        f"v = {velocidade:8.4f}\n"
+        f"a = {aceleracao_valor:8.4f}\n"
+        f"E = {energia_valor:8.6f}\n\n"
+        f"x = {x:8.4f}\n"
+        f"y = {y:8.4f}"
+    )
+
+    ax_texto.set_text(texto)
+
+
+    return (
+        planeta,
+        trilha,
+        ax_texto
+    )
+
+animacao = FuncAnimation(
+    fig,
+    atualizar,
+    interval=20,
+    blit=False
+)
+
+ax.set_title(
+    "SIMULAÇÃO ORBITAL",
+    color="#dddddd",
+    fontsize=14,
+    pad=15
+)
+
+
+plt.show()
